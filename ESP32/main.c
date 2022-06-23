@@ -31,6 +31,7 @@
 
 // Other includes
 #include "test_pwm.h"
+#include "encryption.h"
 
 // WiFi Defines
 #define EXAMPLE_AP_WIFI_SSID		"WRover"
@@ -393,7 +394,7 @@ static void tcp_server_task(void *pvParameters){
 
 void do_retransmit(){
     int len, sock = 0;
-    char rx_buffer[50] = {}, response[] = "Hello from Jupiter\0";
+    char rx_buffer[50] = {}, response[50] = {};
     xQueueReceive(socket_queue, &sock, 20);
 
     do{
@@ -406,8 +407,24 @@ void do_retransmit(){
             ESP_LOGI(TAG, "Received %d bytes...\nMessage: %s", len, rx_buffer);
  
             // Make corresponding action
-            int to_write = strlen(response);
+            int to_write = 50;
             int written = 0;
+
+            if(rx_buffer[0] == 0b0001){
+                ESP_LOGI(TAG, "Command 0x%x", 0b0001);
+                for(int i = 0; i < 50; i++)
+                    response[i] = 0;
+                response[0] = 'H';
+                response[9] = 'e';
+                response[19] = 'l';
+                response[29] = 'l';
+                response[39] = 'o';
+                response[49] = '!';
+            }else{
+                strcpy(response, "Hello, computer C programe!");
+            }
+            encrypt(&response[0], to_write);
+
             while(to_write > 0){
                 written = send((int)sock, response + written, to_write, 0);
                 if(written < 0){
@@ -436,9 +453,11 @@ void app_main(void){
     make_file_data(NULL, 0);
 
     //ESSENTIAL CODE
+    /*
     example_ledc_init();
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+    */
 
     socket_queue = xQueueCreate(1, sizeof(int));
     xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 1 | portPRIVILEGE_BIT, NULL);
