@@ -15,7 +15,7 @@
 #include "websockets.h"
 
 #define SERVER_PORT 8080
-#define MAXLINE 4096
+#define MAXLINE 2048
 #define SA struct sockaddr
 
 int check_ip(char *target_ip_str){
@@ -101,6 +101,97 @@ int send_msg(int argc, char **argv){
 			break;
 	}
 	printf("\nResponse printed.\n");
+
+	if(n < 0){
+		system("clear");
+		printf("Error while reading response!\n");
+		return -1;
+		//exit(0);
+	}
+
+	close(sockfd);
+
+	return 0;
+}
+
+int recv_IR_pict(int argc, char **argv, char *recv_msg, int *recv_msg_size){
+	//Initialize function parameters
+	int sockfd, n = 1;
+	int sendbytes;
+	struct sockaddr_in servaddr;
+	char sendline[MAXLINE];
+	char recvline[MAXLINE];
+	*recv_msg_size = 0;
+
+	//Checking received parameters
+	if(argc != 2){
+		system("clear");
+		printf("Invalid count of arguments!\n");
+		return -1;
+		//exit(0);
+	}
+
+	//Creating socket entity
+	if((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
+		system("clear");
+		printf("Could not create socket struct!\n");
+		return -1;
+		//exit(0);
+	}
+
+	//Initializing socket entity parameters
+	bzero(&servaddr, sizeof(servaddr));
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_port = htons(SERVER_PORT);
+
+	//Turning target ip string into special struct
+	if(inet_pton(AF_INET, argv[1], &servaddr.sin_addr) <= 0){
+		system("clear");
+		printf("Could not turn port into readable port!\n");
+		return -1;
+		//exit(0);
+	}
+
+	//Creating connection
+	if(connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) < 0){
+		system("clear");
+		printf("Could not connect!\n");
+		return -1;
+		//exit(0);
+	}
+
+	//Write command to target
+	sprintf(sendline, "%c000", 0b0001);
+	sendbytes = strlen(sendline);
+
+	if(write(sockfd, sendline, sendbytes) != sendbytes){
+		system("clear");
+		printf("Could not send message!\n");
+		return -1;
+		//exit(0);
+	}
+
+	//Reading and printing response
+	memset(recvline, 0, MAXLINE);
+	int packet_num = 0;
+
+	printf("Waiting for response...\n");
+	while(n > 0){
+		n = read(sockfd, recvline, MAXLINE);
+		printf("Packet %d: %s\n", ++packet_num, recvline);
+
+		for(int i = *recv_msg_size; i < n + *recv_msg_size; i++){
+			recv_msg[i] = recvline[i - *recv_msg_size];
+		}
+		*recv_msg_size += n;
+
+		if(n < 0){
+			printf("Error while reading response!\n");
+		}
+		memset(recvline, 0, 50);
+		if(n < MAXLINE)
+			break;
+	}
 
 	if(n < 0){
 		system("clear");

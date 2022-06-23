@@ -5,51 +5,42 @@
 #include "encryption.h"
 #include "websockets.h"
 
-char some_msg[] = "Hello, World!";
+#define MAX_PICTURE_SIZE 2048
+
+void print_IR_pict_msg(char *recv_msg, int recv_msg_size){
+	system("clear");
+	printf("IR picture string: \n[");
+	for(int i = 0; i < recv_msg_size; i++){
+		if(i < recv_msg_size - 1)
+			printf("%c, ", recv_msg[i]);
+		else
+			printf("%c]\n", recv_msg[i]);
+		if(i && i < recv_msg_size - 1 && (i % 29) == 0)
+			printf("\n");
+	}
+
+	printf("\nIR picture byte dump: \n[");
+	for(int i = 0; i < recv_msg_size; i++){
+		if(i < recv_msg_size - 1)
+			printf("%d, ", recv_msg[i]);
+		else
+			printf("%d]\n", recv_msg[i]);
+		if(i && i < recv_msg_size - 1 && (i % 29) == 0)
+			printf("\n");
+	}
+}
 
 void print_options(){
 	system("clear");
 	printf("1. Type in target ip\n");
 	printf("2. Connect to target\n");
-	printf("3. Open interface for arm control\n");
-	printf("4. Get picture from IR camera on target\n");
-	printf("5. Encrypt message\n");
-	printf("6. Decrypt message\n");
-	printf("7. Decompress IR picture\n\n");
+	printf("3. Get picture from IR camera on target\n");
+	printf("4. Decompress IR picture\n");
+	printf("5. Open interface for arm control\n\n");
 	printf("Option (Type in option number): ");
 }
 
-void option_2(char **sock_pack){
-	send_msg(2, sock_pack);
-}
-
-void option_5(char *msg, int msglen){
-	char message[msglen];
-
-	for(int i = 0; i < msglen; i++)
-		message[i] = msg[i];
-	encrypt(&message[0], msglen);
-
-	system("clear");
-	getchar();
-	print_message(&message[0], msglen);
-	getchar();
-}
-
-void option_6(char *msg, int msglen){
-	char message[msglen];
-
-	for(int i = 0; i < msglen; i++)
-		message[i] = msg[i];
-	encrypt(&message[0], msglen);
-
-	system("clear");
-	getchar();
-	print_message(&message[0], msglen);
-	getchar();
-}
-
-void set_target(char **sock_pack){
+void option_1(char **sock_pack){
 	int TARGET_STR_LEN = 30;
 	char target[TARGET_STR_LEN];
 
@@ -75,6 +66,23 @@ void set_target(char **sock_pack){
 	system("clear");
 }
 
+void option_2(char **sock_pack){
+	send_msg(2, sock_pack);
+}
+
+void option_3(char **sock_pack){
+	char recv_msg[MAX_PICTURE_SIZE] = {};
+	int recv_msg_size = 0;
+
+	recv_IR_pict(2, sock_pack, &recv_msg[0], &recv_msg_size);
+	getchar();
+	decrypt(&recv_msg[0], recv_msg_size);
+	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
+	getchar();
+
+	memset(recv_msg, 0, MAX_PICTURE_SIZE);
+}
+
 int main(){
 	//Defining parameters
 	char opt[10] = {};
@@ -93,14 +101,13 @@ int main(){
 		if(opt[1] == 't'){
 			break;
 		}else if(opt[0] == '1'){
-			set_target(sock_pack);
+			option_1(sock_pack);
 		}else if(opt[0] == '2'){
 			option_2(sock_pack);
 		}else if(opt[0] == '3'){
+			option_3(sock_pack);
 		}else if(opt[0] == '4'){
 		}else if(opt[0] == '5'){
-			option_5(&some_msg[0], strlen(some_msg));
-		}else if(opt[0] == '6'){
 		}
 	}
 
