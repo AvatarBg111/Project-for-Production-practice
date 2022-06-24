@@ -42,7 +42,7 @@
 // Programe Defines
 #define PORT 8080
 #define CONFIG_EXAMPLE_IPV4
-#define WIFI_3
+#define WIFI_5
 
 #ifdef WIFI_1
 	#define EXAMPLE_STA_WIFI_SSID		"Koko"
@@ -53,6 +53,12 @@
 #elif defined(WIFI_3)
 	#define EXAMPLE_STA_WIFI_SSID		"Tech_D3881996"
 	#define EXAMPLE_STA_WIFI_PASS		"FJHPEPJJ"
+#elif defined(WIFI_4)
+	#define EXAMPLE_STA_WIFI_SSID		"Vasta"
+	#define EXAMPLE_STA_WIFI_PASS		"vasta12345"
+#elif defined(WIFI_5)
+	#define EXAMPLE_STA_WIFI_SSID		"TUES"
+	#define EXAMPLE_STA_WIFI_PASS		"elsys-bg.org"
 #endif
 
 // Function defines
