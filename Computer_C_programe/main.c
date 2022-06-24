@@ -77,7 +77,7 @@ void option_3(char **sock_pack){
 	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
 	getchar();
 
-	decrypt(&recv_msg[0], recv_msg_size);
+	CBC_decrypt(&recv_msg[0], recv_msg_size);
 
 	getchar();
 	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
