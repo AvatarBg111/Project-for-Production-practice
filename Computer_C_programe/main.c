@@ -7,26 +7,22 @@
 
 #define MAX_PICTURE_SIZE 2048
 
-void print_IR_pict_msg(char *recv_msg, int recv_msg_size){
-	system("clear");
+void print_IR_pict_msg(unsigned char *recv_msg, int recv_msg_size){
+	//system("clear");
 	printf("IR picture string: \n[");
 	for(int i = 0; i < recv_msg_size; i++){
 		if(i < recv_msg_size - 1)
 			printf("%c, ", recv_msg[i]);
 		else
 			printf("%c]\n", recv_msg[i]);
-		if(i && i < recv_msg_size - 1 && (i % 29) == 0)
-			printf("\n");
 	}
 
 	printf("\nIR picture byte dump: \n[");
 	for(int i = 0; i < recv_msg_size; i++){
 		if(i < recv_msg_size - 1)
-			printf("%d, ", recv_msg[i]);
+			printf("%u, ", recv_msg[i]);
 		else
-			printf("%d]\n", recv_msg[i]);
-		if(i && i < recv_msg_size - 1 && (i % 29) == 0)
-			printf("\n");
+			printf("%u]\n", recv_msg[i]);
 	}
 }
 
@@ -36,7 +32,8 @@ void print_options(){
 	printf("2. Connect to target\n");
 	printf("3. Get picture from IR camera on target\n");
 	printf("4. Decompress IR picture\n");
-	printf("5. Open interface for arm control\n\n");
+	printf("5. Open interface for arm control\n");
+	printf("6. USE CBC\n\n");
 	printf("Option (Type in option number): ");
 }
 
@@ -75,12 +72,30 @@ void option_3(char **sock_pack){
 	int recv_msg_size = 0;
 
 	recv_IR_pict(2, sock_pack, &recv_msg[0], &recv_msg_size);
+
 	getchar();
-	decrypt(&recv_msg[0], recv_msg_size);
 	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
 	getchar();
 
-	memset(recv_msg, 0, MAX_PICTURE_SIZE);
+	decrypt(&recv_msg[0], recv_msg_size);
+
+	getchar();
+	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
+	getchar();
+}
+
+void option_6(){
+	unsigned char recv_msg[] = "Hello! I\'m Baymax, your personal healthcare companion.";
+	int recv_msg_size = strlen(recv_msg);
+
+	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
+	CBC_encrypt(&recv_msg[0], recv_msg_size);
+	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
+	CBC_decrypt(&recv_msg[0], recv_msg_size);
+	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
+
+	getchar();
+	getchar();
 }
 
 int main(){
@@ -108,6 +123,8 @@ int main(){
 			option_3(sock_pack);
 		}else if(opt[0] == '4'){
 		}else if(opt[0] == '5'){
+		}else if(opt[0] == '6'){
+			option_6();
 		}
 	}
 
