@@ -42,7 +42,7 @@
 // Programe Defines
 #define PORT 8080
 #define CONFIG_EXAMPLE_IPV4
-#define WIFI_5
+#define WIFI_3
 
 #ifdef WIFI_1
 	#define EXAMPLE_STA_WIFI_SSID		"Koko"
@@ -429,7 +429,7 @@ void do_retransmit(){
             }else{
                 strcpy(response, "Hello, computer C programe!");
             }
-            encrypt(&response[0], to_write);
+            CBC_encrypt((unsigned char*)&response[0], to_write);
 
             while(to_write > 0){
                 written = send((int)sock, response + written, to_write, 0);
