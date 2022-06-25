@@ -30,8 +30,12 @@
 //#include "driver/ledc.h"
 
 // Other includes
-#include "test_pwm.h"
+#include "mlx90640/mlx90640_api.h"
+//#include "IR_camera/IR_camera.h"
+#include "IR_camera.h"
+#include "BMP/BMP.h"
 #include "encryption.h"
+#include "test_pwm.h"
 
 // WiFi Defines
 #define EXAMPLE_AP_WIFI_SSID		"WRover"
@@ -43,6 +47,8 @@
 #define PORT 8080
 #define CONFIG_EXAMPLE_IPV4
 #define WIFI_3
+#define MAX_IR_BUF_SIZE 2048
+#define IR_DATA_SEND_SIZE ((32*24) * 2) + 80    //res: 32x24, pixel size: 16bit, file header: 80byte
 
 #ifdef WIFI_1
 	#define EXAMPLE_STA_WIFI_SSID		"Koko"
@@ -78,6 +84,8 @@ static int s_retry_num = 0;
 programData_t programs[21];
 QueueHandle_t queue, socket_queue;
 uint32_t ipaddress, ipnetmask, ipgw;
+static uint8_t *BMPfileBuff = NULL;
+int16_t *IRcam_BMP_buff = NULL;
 
 static esp_err_t init_spiffs(void){
     ESP_LOGI(TAG, "Initializing SPIFFS");
@@ -326,6 +334,19 @@ void ip_file(void) {
 	fclose(fd);
 }
 
+void ir_to_char(char *ch_buf, uint8_t *ir_buf){
+    for(int i = 0; i < IR_DATA_SEND_SIZE; i++){
+        ch_buf[i] = ir_buf[i];
+    }
+}
+
+void mlx90640_task(void *arg){
+	while(1){
+		MLX90640_Job();
+		vTaskDelay(pdMS_TO_TICKS(1000));   //Delay for 1000 miliseconds
+	}
+}
+
 static void tcp_server_task(void *pvParameters){
     char addr_str[128];
     int addr_family;
@@ -400,7 +421,8 @@ static void tcp_server_task(void *pvParameters){
 
 void do_retransmit(){
     int len, sock = 0;
-    char rx_buffer[50] = {}, response[50] = {};
+    char rx_buffer[50] = {};
+    char response[MAX_IR_BUF_SIZE] = {};
     xQueueReceive(socket_queue, &sock, 20);
 
     do{
@@ -413,7 +435,7 @@ void do_retransmit(){
             ESP_LOGI(TAG, "Received %d bytes...\nMessage: %s", len, rx_buffer);
  
             // Make corresponding action
-            int to_write = 50;
+            int to_write = 0;
             int written = 0;
 
             if(rx_buffer[0] == 0b0001){
@@ -426,16 +448,40 @@ void do_retransmit(){
                 response[29] = 'l';
                 response[39] = 'o';
                 response[49] = '!';
+                to_write = 50;
+            }else if(rx_buffer[0] == 0b0010){
+                if(BMP_data_queue){
+                    if(xQueueReceive(BMP_data_queue, &IRcam_BMP_buff, 10)){
+                        BitMapFileHeader_init(BMPfileBuff);
+                        Prepare_BMPdata(BMPfileBuff, IRcam_BMP_buff);
+                        //send_BMP_to_API(BMPfileBuff, 1616);
+                        ir_to_char(&response[0], BMPfileBuff);
+                        to_write = IR_DATA_SEND_SIZE;
+                        ESP_LOGI(TAG, "Loaded IR camera frame!");
+                        ESP_LOG_BUFFER_HEXDUMP(TAG, BMPfileBuff, 160, ESP_LOG_INFO);
+                    }else{
+                        strcpy(response, "Err: camera couldn't give frame, because it was not ready!");
+                        to_write = strlen(response);
+                        ESP_LOGE(TAG, "Err: camera couldn't give frame, because it was not ready!");
+                    }
+                }else{
+                    strcpy(response, "Err: camera frame queue error!");
+                    to_write = strlen(response);
+                    ESP_LOGE(TAG, "Err: camera frame queue error!");
+                }
             }else{
                 strcpy(response, "Hello, computer C programe!");
+                to_write = strlen(response);
+                ESP_LOGI(TAG, "Random message loaded!");
             }
-            CBC_encrypt((unsigned char*)&response[0], to_write);
+            //CBC_encrypt((unsigned char*)&response[0], to_write);
 
             while(to_write > 0){
                 written = send((int)sock, response + written, to_write, 0);
                 if(written < 0){
                     ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
                 }
+                ESP_LOGI(TAG, "Sent: %d", written);
                 to_write -= written;
             }
             ESP_LOGI(TAG, "Sent message response to computer");
@@ -459,6 +505,14 @@ void app_main(void){
     make_file_data(NULL, 0);
 
     //ESSENTIAL CODE
+	BMPfileBuff = heap_caps_malloc((768 << 1) + 80, MALLOC_CAP_8BIT);
+    if (!BMPfileBuff)
+    	ESP_LOGE(TAG, "Ошибка выделения ОЗУ для BMP буфера\n");
+
+	ESP_LOGI(TAG, "Initialize Melexis mlx90640");
+    MLX90640_Init();
+    MLX90640_MemSet();
+
     /*
     example_ledc_init();
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
@@ -466,5 +520,9 @@ void app_main(void){
     */
 
     socket_queue = xQueueCreate(1, sizeof(int));
-    xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 1 | portPRIVILEGE_BIT, NULL);
+	BMP_data_queue = xQueueCreate(8, sizeof(int16_t*));
+	if(!BMP_data_queue) ESP_LOGE(TAG, "BMP_data_queue ERR created");
+
+    xTaskCreate(tcp_server_task, "tcp_server", 8192, NULL, 1 | portPRIVILEGE_BIT, NULL);
+    xTaskCreate(mlx90640_task, "mlx90640 task", 2048, NULL, 1 | portPRIVILEGE_BIT, NULL);
 }
