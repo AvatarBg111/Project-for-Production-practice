@@ -30,10 +30,11 @@ void print_options(){
 	system("clear");
 	printf("1. Type in target ip\n");
 	printf("2. Connect to target\n");
-	printf("3. Get picture from IR camera on target\n");
-	printf("4. Decompress IR picture\n");
-	printf("5. Open interface for arm control\n");
-	printf("6. USE CBC\n\n");
+	printf("3. Send random message\n");
+	printf("4. Get picture from IR camera on target\n");
+	printf("5. Decompress IR picture\n");
+	printf("6. Open interface for arm control\n");
+	printf("7. USE CBC\n\n");
 	printf("Option (Type in option number): ");
 }
 
@@ -68,7 +69,7 @@ void option_2(char **sock_pack){
 }
 
 void option_3(char **sock_pack){
-	char recv_msg[MAX_PICTURE_SIZE] = {};
+	/*char recv_msg[MAX_PICTURE_SIZE] = {};
 	int recv_msg_size = 0;
 
 	recv_IR_pict(2, sock_pack, &recv_msg[0], &recv_msg_size);
@@ -81,18 +82,31 @@ void option_3(char **sock_pack){
 
 	getchar();
 	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
-	getchar();
+	getchar();*/
 }
 
-void option_6(){
-	unsigned char recv_msg[] = "Hello! I\'m Baymax, your personal healthcare companion.";
-	int recv_msg_size = strlen(recv_msg);
+void option_4(char **sock_pack){
+	char bmp_ir_pict_buff[MAX_PICTURE_SIZE] = {};
+	int recv_msg_size = 0;
+	FILE *bmp_file;
 
-	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
-	CBC_encrypt(&recv_msg[0], recv_msg_size);
-	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
-	CBC_decrypt(&recv_msg[0], recv_msg_size);
-	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
+	bmp_file = fopen("ir_pict.bmp", "w");
+
+	recv_IR_pict(2, sock_pack, &bmp_ir_pict_buff[0], &recv_msg_size);
+	fwrite(&bmp_ir_pict_buff[0], sizeof(char), recv_msg_size, bmp_file);
+
+	fclose(bmp_file);
+}
+
+void option_7(){
+	unsigned char msg[] = "Hello! I\'m Baymax, your personal healthcare companion.";
+	int msg_size = strlen(msg);
+
+	print_IR_pict_msg(&msg[0], msg_size);
+	CBC_encrypt(&msg[0], msg_size);
+	print_IR_pict_msg(&msg[0], msg_size);
+	CBC_decrypt(&msg[0], msg_size);
+	print_IR_pict_msg(&msg[0], msg_size);
 
 	getchar();
 	getchar();
@@ -120,11 +134,15 @@ int main(){
 		}else if(opt[0] == '2'){
 			option_2(sock_pack);
 		}else if(opt[0] == '3'){
-			option_3(sock_pack);
+			//option_3(sock_pack);
 		}else if(opt[0] == '4'){
+			option_4(sock_pack);
 		}else if(opt[0] == '5'){
+			//option_5(sock_pack);
 		}else if(opt[0] == '6'){
-			option_6();
+			//option_6();
+		}else if(opt[0] == '7'){
+			option_7();
 		}
 	}
 

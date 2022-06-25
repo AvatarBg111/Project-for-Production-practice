@@ -16,6 +16,7 @@
 
 #define SERVER_PORT 8080
 #define MAXLINE 2048
+#define MAX_READ_LEN 1024
 #define SA struct sockaddr
 
 int check_ip(char *target_ip_str){
@@ -119,8 +120,8 @@ int recv_IR_pict(int argc, char **argv, char *recv_msg, int *recv_msg_size){
 	int sockfd, n = 1;
 	int sendbytes;
 	struct sockaddr_in servaddr;
-	char sendline[MAXLINE];
-	char recvline[MAXLINE];
+	char sendline[MAXLINE] = {};
+	char recvline[MAXLINE] = {};
 	*recv_msg_size = 0;
 
 	//Checking received parameters
@@ -161,7 +162,7 @@ int recv_IR_pict(int argc, char **argv, char *recv_msg, int *recv_msg_size){
 	}
 
 	//Write command to target
-	sprintf(sendline, "%c000", 0b0001);
+	sprintf(sendline, "%c000", 0b0010);
 	sendbytes = strlen(sendline);
 
 	if(write(sockfd, sendline, sendbytes) != sendbytes){
@@ -178,7 +179,7 @@ int recv_IR_pict(int argc, char **argv, char *recv_msg, int *recv_msg_size){
 	printf("Waiting for response...\n");
 	while(n > 0){
 		n = read(sockfd, recvline, MAXLINE);
-		printf("Packet %d: %s\n", ++packet_num, recvline);
+		//printf("Packet %d: len - %d\n", ++packet_num, n);
 
 		for(int i = *recv_msg_size; i < n + *recv_msg_size; i++){
 			recv_msg[i] = recvline[i - *recv_msg_size];
@@ -188,8 +189,8 @@ int recv_IR_pict(int argc, char **argv, char *recv_msg, int *recv_msg_size){
 		if(n < 0){
 			printf("Error while reading response!\n");
 		}
-		memset(recvline, 0, 50);
-		if(n < MAXLINE)
+		memset(recvline, 0, n);
+		if(n < MAX_READ_LEN)
 			break;
 	}
 
