@@ -474,7 +474,7 @@ void do_retransmit(){
                 to_write = strlen(response);
                 ESP_LOGI(TAG, "Random message loaded!");
             }
-            //CBC_encrypt((unsigned char*)&response[0], to_write);
+            CBC_encrypt((unsigned char*)&response[0], to_write);
 
             while(to_write > 0){
                 written = send((int)sock, response + written, to_write, 0);
