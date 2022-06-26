@@ -7,11 +7,13 @@
 #include<string.h>
 
 #define DICT_SIZE 1500
+#define DICT_MAXLINE_CAP 100
 #define DICT_STR_MAXLINE 100
 
-int dict_contains(uint16_t*, int*, char, char*, int);
-uint16_t str_to_code(uint16_t*, uint16_t*, int*, char*, int);
-void add_to_dict(uint16_t*, uint16_t*, int*, uint16_t*, char*, int);
-void lzw_compress(unsigned char *msg, int msglen, uint16_t *out_buf, int *out_buf_len);
+uint16_t dict_contains(uint16_t*, uint16_t*, unsigned char, unsigned char*, uint16_t);
+uint16_t str_to_code(uint16_t*, uint16_t*, uint16_t*, unsigned char*, uint16_t);
+void add_to_dict(uint16_t*, uint16_t*, uint16_t*, uint16_t*, unsigned char*, uint16_t);
+void lzw_compress(unsigned char *msg, uint16_t msglen, uint16_t *out_buf, uint16_t *out_buf_len);
+void lzw_decompress(uint16_t *msg, uint16_t msglen, unsigned char *out_buf, uint16_t *out_buf_len);
 
 #endif	//_LZW_H

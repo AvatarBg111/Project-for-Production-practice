@@ -90,15 +90,31 @@ void option_3(char **sock_pack){
 void option_4(char **sock_pack){
 	char bmp_ir_pict_buff[MAX_PICTURE_SIZE] = {};
 	int recv_msg_size = 0;
-	FILE *bmp_file;
+	FILE *bmp_file, *lzw_file;
 
 	bmp_file = fopen("ir_pict.bmp", "w");
+	lzw_file = fopen("ir_pict.lzw", "w");
 
 	recv_IR_pict(2, sock_pack, &bmp_ir_pict_buff[0], &recv_msg_size);
 	CBC_decrypt(&bmp_ir_pict_buff[0], recv_msg_size);
-	fwrite(&bmp_ir_pict_buff[0], sizeof(char), recv_msg_size, bmp_file);
 
+	//  //
+	uint16_t out_buf[recv_msg_size];
+	unsigned char decomp_buf[recv_msg_size];
+	uint16_t out_buf_len = 0;
+	uint16_t decomp_buf_len = 0;
+	//  //
+
+	print_IR_pict_msg(&bmp_ir_pict_buff[0], recv_msg_size);
+	lzw_compress(&bmp_ir_pict_buff[0], recv_msg_size, &out_buf[0], &out_buf_len);
+	fwrite(&out_buf[0], sizeof(char), out_buf_len, lzw_file);
+
+	lzw_decompress(&out_buf[0], out_buf_len, &decomp_buf[0], &decomp_buf_len);
+	//option_8(&bmp_ir_pict_buff[0], recv_msg_size);
+
+	fwrite(&decomp_buf[0], sizeof(char), decomp_buf_len, bmp_file);
 	fclose(bmp_file);
+	fclose(lzw_file);
 }
 
 void option_7(){
@@ -115,22 +131,30 @@ void option_7(){
 	getchar();
 }
 
-void option_8(){
-	char string[] = "thisisthe";
-	uint16_t out_buf[50] = {};
-	int string_len = strlen(string);
-	int out_buf_len = 0;
+void option_8(char *string, int string_len){
+	uint16_t out_buf[string_len];
+	unsigned char decomp_buf[string_len];
+	uint16_t out_buf_len = 0;
+	uint16_t decomp_buf_len = 0;
 
-
-	system("clear");
+	//system("clear");
 	lzw_compress(&string[0], string_len, &out_buf[0], &out_buf_len);
-	printf("Compressed string:\n");
+	printf("Compressed string(%x):\n[", out_buf_len);
 	for(int i = 0; i < out_buf_len; i++){
 		if(i < out_buf_len - 1)
 			printf("%u, ", out_buf[i]);
 		else
 			printf("%u]\n", out_buf[i]);
 	}
+
+	lzw_decompress(&out_buf[0], out_buf_len, &decomp_buf[0], &decomp_buf_len);
+	/*printf("\n\n\nDecompressed string(%x):\n[", decomp_buf_len);
+	for(int i = 0; i < decomp_buf_len; i++){
+		if(i < out_buf_len - 1)
+			printf("%u, ", decomp_buf[i]);
+		else
+			printf("%u]\n", decomp_buf[i]);
+	}*/
 
 	getchar();
 	getchar();
@@ -168,7 +192,7 @@ int main(){
 		}else if(opt[0] == '7'){
 			option_7();
 		}else if(opt[0] == '8'){
-			option_8();
+			//option_8();
 		}
 	}
 
