@@ -4,6 +4,7 @@
 #include "main.h"
 #include "encryption.h"
 #include "websockets.h"
+#include "lzw.h"
 
 #define MAX_PICTURE_SIZE 2048
 
@@ -34,7 +35,8 @@ void print_options(){
 	printf("4. Get picture from IR camera on target\n");
 	printf("5. Decompress IR picture\n");
 	printf("6. Open interface for arm control\n");
-	printf("7. USE CBC\n\n");
+	printf("7. USE CBC\n");
+	printf("8. USE LZW\n\n");
 	printf("Option (Type in option number): ");
 }
 
@@ -93,6 +95,7 @@ void option_4(char **sock_pack){
 	bmp_file = fopen("ir_pict.bmp", "w");
 
 	recv_IR_pict(2, sock_pack, &bmp_ir_pict_buff[0], &recv_msg_size);
+	CBC_decrypt(&bmp_ir_pict_buff[0], recv_msg_size);
 	fwrite(&bmp_ir_pict_buff[0], sizeof(char), recv_msg_size, bmp_file);
 
 	fclose(bmp_file);
@@ -107,6 +110,27 @@ void option_7(){
 	print_IR_pict_msg(&msg[0], msg_size);
 	CBC_decrypt(&msg[0], msg_size);
 	print_IR_pict_msg(&msg[0], msg_size);
+
+	getchar();
+	getchar();
+}
+
+void option_8(){
+	char string[] = "thisisthe";
+	uint16_t out_buf[50] = {};
+	int string_len = strlen(string);
+	int out_buf_len = 0;
+
+
+	system("clear");
+	lzw_compress(&string[0], string_len, &out_buf[0], &out_buf_len);
+	printf("Compressed string:\n");
+	for(int i = 0; i < out_buf_len; i++){
+		if(i < out_buf_len - 1)
+			printf("%u, ", out_buf[i]);
+		else
+			printf("%u]\n", out_buf[i]);
+	}
 
 	getchar();
 	getchar();
@@ -143,6 +167,8 @@ int main(){
 			//option_6();
 		}else if(opt[0] == '7'){
 			option_7();
+		}else if(opt[0] == '8'){
+			option_8();
 		}
 	}
 
