@@ -1,15 +1,11 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
 #include "main.h"
 #include "encryption.h"
 #include "websockets.h"
-#include "lzw.h"
+#include "tlzw.h"
 
 #define MAX_PICTURE_SIZE 2048
 
 void print_IR_pict_msg(unsigned char *recv_msg, int recv_msg_size){
-	//system("clear");
 	printf("IR picture string: \n[");
 	for(int i = 0; i < recv_msg_size; i++){
 		if(i < recv_msg_size - 1)
@@ -31,12 +27,9 @@ void print_options(){
 	system("clear");
 	printf("1. Type in target ip\n");
 	printf("2. Connect to target\n");
-	printf("3. Send random message\n");
-	printf("4. Get picture from IR camera on target\n");
-	printf("5. Decompress IR picture\n");
-	printf("6. Open interface for arm control\n");
-	printf("7. USE CBC\n");
-	printf("8. USE LZW\n\n");
+	printf("3. Get picture from IR camera on target\n");
+	printf("4. Decompress IR picture\n");
+	printf("5. Open interface for arm control\n\n");
 	printf("Option (Type in option number): ");
 }
 
@@ -67,97 +60,46 @@ void option_1(char **sock_pack){
 }
 
 void option_2(char **sock_pack){
+	//Send some message to target
 	send_msg(2, sock_pack);
 }
 
 void option_3(char **sock_pack){
-	/*char recv_msg[MAX_PICTURE_SIZE] = {};
-	int recv_msg_size = 0;
+	//Buffers
+	unsigned char bmp_ir_pict_buff[MAX_PICTURE_SIZE] = {};
+	unsigned char decomp_buf[MAX_PICTURE_SIZE];
+	uint16_t out_buf[MAX_PICTURE_SIZE];
 
-	recv_IR_pict(2, sock_pack, &recv_msg[0], &recv_msg_size);
+	//Variables for buffers
+	uint16_t recv_msg_size = 0;
+	uint16_t out_buf_len = 0;
+	uint16_t decomp_buf_len = 0;
 
-	getchar();
-	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
-	getchar();
+	//File variables
+	FILE *bmp_file, *lzw_file, *decomp_file;
 
-	CBC_decrypt(&recv_msg[0], recv_msg_size);
-
-	getchar();
-	print_IR_pict_msg(&recv_msg[0], recv_msg_size);
-	getchar();*/
-}
-
-void option_4(char **sock_pack){
-	char bmp_ir_pict_buff[MAX_PICTURE_SIZE] = {};
-	int recv_msg_size = 0;
-	FILE *bmp_file, *lzw_file;
-
+	//Opening picture files
 	bmp_file = fopen("ir_pict.bmp", "w");
 	lzw_file = fopen("ir_pict.lzw", "w");
+	decomp_file = fopen("ir_pict_decomp.bmp", "w");
 
-	recv_IR_pict(2, sock_pack, &bmp_ir_pict_buff[0], &recv_msg_size);
-	CBC_decrypt(&bmp_ir_pict_buff[0], recv_msg_size);
+	//Receiving and decrypting IR picture
+	recv_IR_pict(2, sock_pack, &bmp_ir_pict_buff[0], (int*)&recv_msg_size);
+	CBC_decrypt(&bmp_ir_pict_buff[0], (int)recv_msg_size);
 
-	//  //
-	uint16_t out_buf[recv_msg_size];
-	unsigned char decomp_buf[recv_msg_size];
-	uint16_t out_buf_len = 0;
-	uint16_t decomp_buf_len = 0;
-	//  //
-
-	print_IR_pict_msg(&bmp_ir_pict_buff[0], recv_msg_size);
-	lzw_compress(&bmp_ir_pict_buff[0], recv_msg_size, &out_buf[0], &out_buf_len);
-	fwrite(&out_buf[0], sizeof(char), out_buf_len, lzw_file);
-
+	//Compressing and decompressing picture buffer
+	lzw_compress(&bmp_ir_pict_buff[0], &recv_msg_size, &out_buf[0], &out_buf_len);
 	lzw_decompress(&out_buf[0], out_buf_len, &decomp_buf[0], &decomp_buf_len);
-	//option_8(&bmp_ir_pict_buff[0], recv_msg_size);
 
-	fwrite(&decomp_buf[0], sizeof(char), decomp_buf_len, bmp_file);
+	//Writing normal, compressed and decompressed picture buffers in files
+	fwrite(&out_buf[0], sizeof(unsigned char), out_buf_len, lzw_file);
+	fwrite(&bmp_ir_pict_buff[0], sizeof(unsigned char), (int)recv_msg_size, decomp_file);
+	fwrite(&decomp_buf[0], sizeof(unsigned char), decomp_buf_len, bmp_file);
+
+	//Closing picture files
 	fclose(bmp_file);
 	fclose(lzw_file);
-}
-
-void option_7(){
-	unsigned char msg[] = "Hello! I\'m Baymax, your personal healthcare companion.";
-	int msg_size = strlen(msg);
-
-	print_IR_pict_msg(&msg[0], msg_size);
-	CBC_encrypt(&msg[0], msg_size);
-	print_IR_pict_msg(&msg[0], msg_size);
-	CBC_decrypt(&msg[0], msg_size);
-	print_IR_pict_msg(&msg[0], msg_size);
-
-	getchar();
-	getchar();
-}
-
-void option_8(char *string, int string_len){
-	uint16_t out_buf[string_len];
-	unsigned char decomp_buf[string_len];
-	uint16_t out_buf_len = 0;
-	uint16_t decomp_buf_len = 0;
-
-	//system("clear");
-	lzw_compress(&string[0], string_len, &out_buf[0], &out_buf_len);
-	printf("Compressed string(%x):\n[", out_buf_len);
-	for(int i = 0; i < out_buf_len; i++){
-		if(i < out_buf_len - 1)
-			printf("%u, ", out_buf[i]);
-		else
-			printf("%u]\n", out_buf[i]);
-	}
-
-	lzw_decompress(&out_buf[0], out_buf_len, &decomp_buf[0], &decomp_buf_len);
-	/*printf("\n\n\nDecompressed string(%x):\n[", decomp_buf_len);
-	for(int i = 0; i < decomp_buf_len; i++){
-		if(i < out_buf_len - 1)
-			printf("%u, ", decomp_buf[i]);
-		else
-			printf("%u]\n", decomp_buf[i]);
-	}*/
-
-	getchar();
-	getchar();
+	fclose(decomp_file);
 }
 
 int main(){
@@ -182,17 +124,11 @@ int main(){
 		}else if(opt[0] == '2'){
 			option_2(sock_pack);
 		}else if(opt[0] == '3'){
-			//option_3(sock_pack);
+			option_3(sock_pack);
 		}else if(opt[0] == '4'){
-			option_4(sock_pack);
+			//option_4(sock_pack);
 		}else if(opt[0] == '5'){
 			//option_5(sock_pack);
-		}else if(opt[0] == '6'){
-			//option_6();
-		}else if(opt[0] == '7'){
-			option_7();
-		}else if(opt[0] == '8'){
-			//option_8();
 		}
 	}
 

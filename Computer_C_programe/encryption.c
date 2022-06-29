@@ -105,6 +105,3 @@ void CBC_decrypt(unsigned char *msg, int msglen){
 		i = block_idx;
 	}
 }
-
-
-
