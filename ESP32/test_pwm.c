@@ -12,14 +12,26 @@ void example_ledc_init(void){
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
 
     // Prepare and then apply the LEDC PWM channel configuration
-    ledc_channel_config_t ledc_channel = {
+    ledc_channel_config_t ledc_channel1 = {
         .speed_mode     = LEDC_MODE,
-        .channel        = LEDC_CHANNEL,
+        .channel        = LEDC_CHANNEL1,
         .timer_sel      = LEDC_TIMER,
         .intr_type      = LEDC_INTR_DISABLE,
-        .gpio_num       = LEDC_OUTPUT_IO,
-        .duty           = 0, // Set duty to 0%
+        .gpio_num       = LEDC_OUTPUT_IO1,
+        .duty           = 200, // Set duty to 0%
         .hpoint         = 0
     };
-    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+
+    ledc_channel_config_t ledc_channel2 = {
+        .speed_mode     = LEDC_MODE,
+        .channel        = LEDC_CHANNEL2,
+        .timer_sel      = LEDC_TIMER,
+        .intr_type      = LEDC_INTR_DISABLE,
+        .gpio_num       = LEDC_OUTPUT_IO2,
+        .duty           = 300, // Set duty to 0%
+        .hpoint         = 0
+    };
+
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel1));
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel2));
 }

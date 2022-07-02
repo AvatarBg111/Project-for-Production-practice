@@ -166,7 +166,7 @@ void create_new_symbol_to_dict(lzw_struct *lzw, uint16_t *prev_code){
 void compress(lzw_struct *lzw){
 	//Some variables
 	uint16_t curr_msg_indx = 0, start_loop_flag = 1;
-	unsigned char temp_str[200] = {}, temp_str_len = 0;
+	unsigned char temp_str[500] = {}, temp_str_len = 0;
 
 	if(lzw->dictionary_size){
 		free(lzw->dictionary_codes);
@@ -245,5 +245,24 @@ void lzw_decompress(uint16_t *msg, uint16_t msglen, unsigned char *out_buf, uint
 			}
 		}
 		prev_code = curr_code;
+	}
+}
+
+void save_compressed_buffer(uint16_t *buf, uint16_t buf_len, FILE *file){
+	unsigned char char_buf[buf_len * 2];
+
+	for(int i = 0; i < buf_len; i++){
+		char_buf[i*2] = buf[i] >> 8;
+		char_buf[(i*2) + 1] = buf[i];
+	}
+
+	fwrite(char_buf, sizeof(unsigned char), buf_len * 2, file);
+}
+
+void char_buf_to_uint16_buf(unsigned char *char_buf, uint16_t char_buf_len, uint16_t *uint_buf){
+	for(int i = 0; i < char_buf_len; i += 2){
+		uint_buf[i / 2] |= char_buf[i];
+		uint_buf[i / 2] <<= 8;
+		uint_buf[i / 2] |= char_buf[i + 1];
 	}
 }

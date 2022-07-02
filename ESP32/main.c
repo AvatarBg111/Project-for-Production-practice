@@ -46,9 +46,9 @@
 // Programe Defines
 #define PORT 8080
 #define CONFIG_EXAMPLE_IPV4
-#define WIFI_3
 #define MAX_IR_BUF_SIZE 2048
 #define IR_DATA_SEND_SIZE ((32*24) * 2) + 80    //res: 32x24, pixel size: 16bit, file header: 80byte
+#define WIFI_3
 
 #ifdef WIFI_1
 	#define EXAMPLE_STA_WIFI_SSID		"Koko"
@@ -438,7 +438,8 @@ void do_retransmit(){
             int to_write = 0;
             int written = 0;
 
-            if(rx_buffer[0] == 0b0001){
+            /*
+            if(rx_buffer[0] == 0b1000){
                 ESP_LOGI(TAG, "Command 0x%x", 0b0001);
                 for(int i = 0; i < 50; i++)
                     response[i] = 0;
@@ -449,7 +450,8 @@ void do_retransmit(){
                 response[39] = 'o';
                 response[49] = '!';
                 to_write = 50;
-            }else if(rx_buffer[0] == 0b0010){
+            */
+            if(rx_buffer[0] == 0b0001){
                 if(BMP_data_queue){
                     if(xQueueReceive(BMP_data_queue, &IRcam_BMP_buff, 10)){
                         BitMapFileHeader_init(BMPfileBuff);
@@ -469,6 +471,20 @@ void do_retransmit(){
                     to_write = strlen(response);
                     ESP_LOGE(TAG, "Err: camera frame queue error!");
                 }
+            }else if(rx_buffer[0] == 0b0010){
+                ESP_LOGI(TAG, "Arm will push/pull to %d degrees", (unsigned int)rx_buffer[1]);
+                strcpy(response, "Movement started");
+                to_write = strlen(response);
+
+                ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, LEDC_DUTY + (unsigned int)rx_buffer[1]));
+                ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
+            }else if(rx_buffer[0] == 0b0100){
+                ESP_LOGI(TAG, "Arm will lift/lower to %d degrees", (unsigned int)rx_buffer[1]);
+                strcpy(response, "Movement started");
+                to_write = strlen(response);
+
+                ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, LEDC_DUTY + (unsigned int)rx_buffer[1]));
+                ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
             }else{
                 strcpy(response, "Hello, computer C programe!");
                 to_write = strlen(response);
@@ -513,8 +529,8 @@ void app_main(void){
     MLX90640_Init();
     MLX90640_MemSet();
 
-    /*
     example_ledc_init();
+    /*
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
     */
